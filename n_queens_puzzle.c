@@ -1,0 +1,171 @@
+//
+// Solving N-queens puzzle
+// Example from book: "AI Application Programming" by M. Tim Jones (chapter 2)
+//
+
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+#include <stdio.h>
+
+#define SIZE 8
+#define INITIAL_TEMPERATURE 50
+#define FINAL_TEMPERATURE 0.5
+#define ALPHA 0.99
+#define STEPS_PER_CHANGE 100
+
+typedef 
+int 
+solutionType[SIZE];
+
+typedef
+struct {
+	solutionType solution;
+	float energy;
+}
+memberType;
+
+int
+getRand(int max) {
+	return rand() % max;
+}
+
+float
+getRandF() {
+	return (float)rand() / (float)RAND_MAX;
+}
+
+void
+shuffleSolution(memberType * m) {
+	int x;
+	int y;
+	int temp;
+	x = getRand(SIZE);
+	do {
+		y = getRand(SIZE);
+	} while (x == y);
+	temp = m->solution[x];
+	m->solution[x] = m->solution[y];
+	m->solution[y] = temp;
+}
+
+void
+initializeSolution(memberType * m) {
+	int i;
+	for(i = 0; i < SIZE; ++i) {
+		m->solution[i] = i;
+	}
+	for(i = 0; i < SIZE; ++i) {
+		shuffleSolution(m);
+	}
+}
+
+void
+calculateEnergy(memberType * m) {
+	int dx[4] = {-1, -1, 1,  1};
+	int dy[4] = { 1, -1, 1, -1};
+
+	int collisions = 0;
+	
+	int i;
+	int j;
+	int currX;
+	int currY;
+	
+	for(i = 0; i < SIZE; ++i) {
+		for(j = 0; j < 4; ++j) {
+			currX = i;
+			currY = m->solution[i];
+			
+			currX += dx[j];
+			currY += dy[j];
+			while((currX >= 0) && (currX < SIZE)) {
+				if(m->solution[currX] == currY) {
+					++collisions;
+				}
+				currX += dx[j];
+				currY += dy[j];
+			}
+		}
+	}
+
+	m->energy = (float) collisions;
+}
+
+void
+displaySolution(memberType * m) {
+	int i;
+	int j;
+	for(i = 0; i < SIZE; ++i) {
+		for(j = 0; j < SIZE; ++j) {
+			if(m->solution[i] == j)
+				printf("X");
+			else
+				printf("O");
+		}
+		printf("\n");
+	}
+	printf("Energy is %f\n", m->energy);
+}
+
+void
+copySolution(memberType * source, memberType * dest) {
+	dest->energy = source->energy;
+	int i;
+	for(i = 0; i < SIZE; ++i) {
+		dest->solution[i] = source->solution[i];
+	}
+}
+
+int 
+main() {
+	srand(time(NULL));
+
+	memberType current;
+	initializeSolution(&current);
+	calculateEnergy(&current);
+	displaySolution(&current);
+
+	memberType working;
+	memberType best;
+	int i;
+	float deltaEnergy;
+	float p;
+
+	copySolution(&current, &best);
+	int useNew;
+
+	float temperature = INITIAL_TEMPERATURE;
+	while(temperature > FINAL_TEMPERATURE) {
+		copySolution(&current, &working);
+		useNew = 0;
+	
+		for(i = 0; i < STEPS_PER_CHANGE; ++i) {
+			shuffleSolution(&working);
+			calculateEnergy(&working);
+
+			if(working.energy < current.energy) {
+				useNew = 1;
+			} else {
+				deltaEnergy = working.energy - current.energy;
+				p = expf(- deltaEnergy / temperature);
+				if(getRandF() > p) {
+					useNew = 1;
+				}
+			}
+		}
+
+		if(useNew) {
+			copySolution(&working, &current);
+		}
+
+		if(best.energy > current.energy) {
+			copySolution(&current, &best);
+			displaySolution(&best);
+		}
+
+		temperature *= ALPHA;	
+	}
+
+	return 0;
+}

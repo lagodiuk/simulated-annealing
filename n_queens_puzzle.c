@@ -9,10 +9,11 @@
 #include <stdio.h>
 
 #define SIZE 40
-#define INITIAL_TEMPERATURE 70
+#define INITIAL_TEMPERATURE 100
 #define FINAL_TEMPERATURE 0.5
 #define ALPHA 0.99
 #define STEPS_PER_CHANGE 100
+#define ANSWER_ENERGY_THRESHOLD 1e-5
 
 typedef 
 int 
@@ -174,7 +175,10 @@ main() {
 			}
 		}
 		fprintf(log, "%f\t%f\t%f\n", temperature, (float)accepted, (float)best.energy);
-		temperature *= ALPHA;	
+		if(best.energy < ANSWER_ENERGY_THRESHOLD) {
+			break;
+		}
+		temperature *= ALPHA;
 	}
 
 	fclose(log);

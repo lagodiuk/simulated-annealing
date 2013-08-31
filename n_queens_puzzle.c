@@ -143,6 +143,7 @@ main() {
 	copySolution(&current, &working);
 
 	FILE * log = fopen("log.txt", "w");
+	fprintf(log, "temperature\taccepted\tbest_energy\n");
 
 	while(temperature > FINAL_TEMPERATURE) {
 		accepted = 0;

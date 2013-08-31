@@ -8,7 +8,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define SIZE 8
+#define SIZE 40
 #define INITIAL_TEMPERATURE 70
 #define FINAL_TEMPERATURE 0.5
 #define ALPHA 0.99
@@ -141,6 +141,8 @@ main() {
 	copySolution(&current, &best);
 	copySolution(&current, &working);
 
+	FILE * log = fopen("log.txt", "w");
+
 	while(temperature > FINAL_TEMPERATURE) {
 		accepted = 0;
 		for(step = 0; step < STEPS_PER_CHANGE; ++step) {
@@ -153,7 +155,7 @@ main() {
 				useNew = 1;
 			} else {
 				deltaEnergy = working.energy - current.energy;
-				if(getRandF() > expf(- deltaEnergy / temperature)) {
+				if(getRandF() < expf(- deltaEnergy / temperature)) {
 					useNew = 1;
 					++accepted;
 				}
@@ -171,8 +173,11 @@ main() {
 				copySolution(&current, &working);
 			}
 		}
+		fprintf(log, "%f\t%f\t%f\n", temperature, (float)accepted, (float)best.energy);
 		temperature *= ALPHA;	
 	}
+
+	fclose(log);
 
 	return 0;
 }

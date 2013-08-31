@@ -9,7 +9,7 @@
 #include <stdio.h>
 
 #define SIZE 8
-#define INITIAL_TEMPERATURE 50
+#define INITIAL_TEMPERATURE 70
 #define FINAL_TEMPERATURE 0.5
 #define ALPHA 0.99
 #define STEPS_PER_CHANGE 100
@@ -122,25 +122,30 @@ main() {
 	srand(time(NULL));
 
 	memberType current;
-	initializeSolution(&current);
-	calculateEnergy(&current);
-	displaySolution(&current);
-
 	memberType working;
 	memberType best;
-	int i;
+
+	int step;
 	float deltaEnergy;
 	float p;
 
 	copySolution(&current, &best);
 	int useNew;
+	int accepted;
 
 	float temperature = INITIAL_TEMPERATURE;
+
+	initializeSolution(&current);
+	calculateEnergy(&current);
+
+	copySolution(&current, &best);
+	copySolution(&current, &working);
+
 	while(temperature > FINAL_TEMPERATURE) {
-		copySolution(&current, &working);
-		useNew = 0;
-	
-		for(i = 0; i < STEPS_PER_CHANGE; ++i) {
+		accepted = 0;
+		for(step = 0; step < STEPS_PER_CHANGE; ++step) {
+			useNew = 0;
+			
 			shuffleSolution(&working);
 			calculateEnergy(&working);
 
@@ -148,22 +153,24 @@ main() {
 				useNew = 1;
 			} else {
 				deltaEnergy = working.energy - current.energy;
-				p = expf(- deltaEnergy / temperature);
-				if(getRandF() > p) {
+				if(getRandF() > expf(- deltaEnergy / temperature)) {
 					useNew = 1;
+					++accepted;
 				}
 			}
-		}
 
-		if(useNew) {
-			copySolution(&working, &current);
-		}
+			if(useNew) {
+				useNew = 0;
 
-		if(best.energy > current.energy) {
-			copySolution(&current, &best);
-			displaySolution(&best);
+				copySolution(&working, &current);
+				if(current.energy < best.energy) {
+					copySolution(&current, &best);
+					displaySolution(&best);
+				}
+			} else {
+				copySolution(&current, &working);
+			}
 		}
-
 		temperature *= ALPHA;	
 	}
 

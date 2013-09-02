@@ -10,7 +10,7 @@
 
 #define SIZE 40
 #define INITIAL_TEMPERATURE 100
-#define FINAL_TEMPERATURE 0.5
+#define FINAL_TEMPERATURE 0.3
 #define ALPHA 0.99
 #define STEPS_PER_CHANGE 100
 #define ANSWER_ENERGY_THRESHOLD 1e-5
@@ -130,7 +130,6 @@ main() {
 	float deltaEnergy;
 	float p;
 
-	copySolution(&current, &best);
 	int useNew;
 	int accepted;
 

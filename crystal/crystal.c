@@ -6,13 +6,15 @@
 #include <math.h>
 #include <stdio.h>
 
-#define WIDTH 100
-#define HEIGHT 100
-#define INITIAL_TEMPERATURE 10
+#define WIDTH 120
+#define HEIGHT 90
+#define INITIAL_TEMPERATURE 5
 #define FINAL_TEMPERATURE 0.1
 #define ALPHA 0.998
 #define STEPS_PER_CHANGE 100
 #define ANSWER_ENERGY_THRESHOLD 1e-5
+#define SAME_COLORS_THRESHOLD 1e-5
+#define TELEPORT
 
 typedef
 struct {
@@ -31,6 +33,16 @@ getRandF() {
 	return (float)rand() / (float)RAND_MAX;
 }
 
+float
+potential_energy(Color * c1, Color * c2) {
+	float dr = (c1->r - c2->r) / (float) 256;
+	float dg = (c1->g - c2->g) / (float) 256;
+	float db = (c1->b - c2->b) / (float) 256;
+	return dr * dr + dg * dg + db * db;
+}
+
+#ifdef TELEPORT
+// Swap random points
 void
 shuffleSolution(memberType * m) {
 	int x1 = getRand(WIDTH);
@@ -41,7 +53,7 @@ shuffleSolution(memberType * m) {
 	int y2 = getRand(HEIGHT);
     Color c2 = get_pixel(x2, y2, m->canvas);
     
-    while((c1.r == c2.r) && (c1.g == c2.g) && (c1.b == c2.b)) {
+    while(potential_energy(&c1, &c2) < SAME_COLORS_THRESHOLD) {
         x2 = getRand(WIDTH);
         y2 = getRand(HEIGHT);
         c2 = get_pixel(x2, y2, m->canvas);
@@ -50,27 +62,54 @@ shuffleSolution(memberType * m) {
     set_pixel(x1, y1, c2, m->canvas);
     set_pixel(x2, y2, c1, m->canvas);
 }
+#else
+// Swap neighbour points
+void
+shuffleSolution(memberType * m) {
+	int x1 = getRand(WIDTH - 1) + 1;
+	int y1 = getRand(HEIGHT - 1) + 1;
+    Color c1 = get_pixel(x1, y1, m->canvas);
+    
+    int dx[8] = {-1, 1,  0, 0, -1, -1,  1, 1};
+    int dy[8] = { 0, 0, -1, 1, -1,  1, -1, 1};
+    
+    int i = getRand(4);
+    
+    int x2 = x1 + dx[i];
+	int y2 = y1 + dy[i];
+    Color c2 = get_pixel(x2, y2, m->canvas);
+    
+    set_pixel(x1, y1, c2, m->canvas);
+    set_pixel(x2, y2, c1, m->canvas);
+}
+#endif // TELEPORT
 
 void
 initializeSolution(memberType * m) {
 	m->canvas = new_canvas(WIDTH, HEIGHT);
     int i;
     int j;
-    int c;
-    Color colors[3] = {rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255)};
+    Color c;
+    float rand;
     for(i = 0; i < WIDTH; ++i) {
         for(j = 0; j < HEIGHT; ++j) {
-            c = getRand(3);
-            set_pixel(i, j, colors[c], m->canvas);
+            rand = getRandF();
+            if(rand < 0.5)
+                c = rgb(getRand(50), getRand(256), getRand(50));
+            else if(rand < 0.75)
+                c = rgb(getRand(150), getRand(150), getRand(256));
+            else
+                c = rgb(getRand(256), getRand(150), getRand(150));
+            set_pixel(i, j, c, m->canvas);
         }
     }
 }
 
 void
 calculateEnergy(memberType * m) {
-    int diff = 0;
-    int dx[4] = {-1, 1,  0, 0};
-    int dy[4] = { 0, 0, -1, 1};
+    float diff = 0;
+    int dx[8] = {-1, 1,  0, 0, -1, -1,  1, 1};
+    int dy[8] = { 0, 0, -1, 1, -1,  1, -1, 1};
     int i;
     int j;
     int k;
@@ -81,8 +120,7 @@ calculateEnergy(memberType * m) {
             c1 = get_pixel(i, j, m->canvas);
             for(k = 0; k < 4; ++k) {
                 c2 = get_pixel(i + dx[k], j + dy[k], m->canvas);
-                if((c1.r != c2.r) || (c1.g != c2.g) || (c1.b != c2.b))
-                    ++diff;
+                diff += potential_energy(&c1, &c2);
             }
         }
     }
@@ -142,6 +180,8 @@ main() {
 	FILE * log = fopen("log.txt", "w");
 	fprintf(log, "temperature\taccepted\tbest_energy\n");
 
+    int num;
+    char file_name[200];
 	while(temperature > FINAL_TEMPERATURE) {
 		accepted = 0;
 		for(step = 0; step < STEPS_PER_CHANGE; ++step) {
@@ -166,7 +206,12 @@ main() {
 				copySolution(&working, &current);
 				if(current.energy < best.energy) {
 					copySolution(&current, &best);
-					//displaySolution(&best);
+                    
+                    ++num;
+                    if(num % 200 == 0) {
+                        sprintf(file_name, "step_%06i.png", (num / 200));
+                        displaySolution(&best, file_name);
+                    }
 				}
 			} else {
 				copySolution(&current, &working);
